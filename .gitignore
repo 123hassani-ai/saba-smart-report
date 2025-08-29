@@ -1,0 +1,63 @@
+# فایل‌های لاگ
+logs/*.log
+logs/*.txt
+*.log
+
+# فایل‌های موقت
+temp/*
+tmp/*
+*.tmp
+
+# فایل‌های پیکربندی حساس (اختیاری)
+# config.json
+
+# فایل‌های سیستم
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# فایل‌های IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# فایل‌های Windows
+*.bat.bak
+*.bat~
+
+# فایل‌های PHP موقت
+*.php~
+*.php.bak
+
+# Cache files
+*.cache
+
+# فایل‌های backup
+*.backup
+*.bak
+backup/
+
+# فایل‌های کامپایل شده
+*.pyc
+*.pyo
+__pycache__/
+
+# فایل‌های Node.js (در صورت استفاده)
+node_modules/
+npm-debug.log*
+
+# فایل‌های Composer (در صورت استفاده)
+vendor/
+composer.lock
+
+# فایل‌های upload شده
+uploads/
+files/
+
+# فایل‌های session
+sessions/
+
+# فایل‌های error
+error_log
+php_errors.log

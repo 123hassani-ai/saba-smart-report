@@ -1,0 +1,29 @@
+{
+    "sql_server": {
+        "server": "C123-SRV",
+        "database": "Saba404",
+        "username": "sa",
+        "password": "555",
+        "port": "1433",
+        "connection_method": "com"
+    },
+    "cloud": {
+        "host": "93.127.180.221",
+        "database": "reports_database",
+        "username": "sync_user",
+        "password": "YourStrongPassword123!",
+        "port": "3306"
+    },
+    "settings": {
+        "auto_sync_interval": 300,
+        "batch_size": 1000,
+        "max_execution_time": 300,
+        "log_level": "info",
+        "timezone": "Asia/Tehran"
+    },
+    "dashboard": {
+        "items_per_page": 50,
+        "refresh_interval": 30,
+        "theme": "default"
+    }
+}

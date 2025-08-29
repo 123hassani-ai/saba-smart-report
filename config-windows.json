@@ -1,0 +1,36 @@
+{
+    "sql_server": {
+        "server": "localhost\\SQLEXPRESS",
+        "database": "SabaDB",
+        "username": "",
+        "password": "",
+        "port": "1433",
+        "connection_method": "com",
+        "timeout": 30,
+        "trust_server_certificate": true,
+        "integrated_security": true
+    },
+    "cloud_mysql": {
+        "host": "your-cloud-server.com",
+        "database": "cloud_db",
+        "username": "cloud_user",
+        "password": "cloud_password",
+        "port": 3306,
+        "charset": "utf8mb4"
+    },
+    "sync": {
+        "batch_size": 1000,
+        "max_execution_time": 300,
+        "memory_limit": "512M",
+        "log_level": "info",
+        "retry_attempts": 3,
+        "retry_delay": 5
+    },
+    "web": {
+        "title": "Saba Reporting System - Windows",
+        "theme": "modern",
+        "language": "fa",
+        "timezone": "Asia/Tehran",
+        "auto_refresh": 30
+    }
+}

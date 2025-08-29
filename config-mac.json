@@ -1,0 +1,23 @@
+{
+    "sql_server": {
+        "server": "123.123.1.2",
+        "database": "YOUR_DATABASE_NAME",
+        "username": "sa",
+        "password": "YOUR_PASSWORD", 
+        "port": "1433",
+        "connection_method": "odbc"
+    },
+    "cloud": {
+        "host": "YOUR_VPS_IP",
+        "database": "reports_database",
+        "username": "sync_user",
+        "password": "YOUR_MYSQL_PASSWORD",
+        "port": "3306"
+    },
+    "settings": {
+        "auto_sync_interval": 300,
+        "batch_size": 1000,
+        "max_execution_time": 300,
+        "log_level": "info"
+    }
+}
