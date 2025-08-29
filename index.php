@@ -79,6 +79,9 @@ class SabaApp {
             case 'api':
                 $this->handleAPI();
                 break;
+            case 'ssms':
+                $this->showSSMS();
+                break;
             case 'dashboard':
             default:
                 $this->showDashboard();
@@ -156,6 +159,7 @@ class SabaApp {
      * نمایش داشبورد وب
      */
     private function showDashboard() {
+        $action = $_GET['action'] ?? 'dashboard';
         ?>
         <!DOCTYPE html>
         <html lang="fa" dir="rtl">
@@ -164,12 +168,18 @@ class SabaApp {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>سیستم گزارش‌گیری سبا</title>
             <link rel="stylesheet" href="assets/css/style.css">
+            <link rel="stylesheet" href="assets/css/nav.css">
         </head>
         <body>
             <div class="app-container">
                 <header class="app-header">
                     <h1>🚀 سیستم گزارش‌گیری سبا</h1>
                     <p>همگام‌سازی SQL Server به Cloud Database</p>
+                    <nav class="app-nav">
+                        <a href="?action=dashboard" class="nav-link <?php echo $action === 'dashboard' ? 'active' : ''; ?>">داشبورد</a>
+                        <a href="?action=ssms" class="nav-link <?php echo $action === 'ssms' ? 'active' : ''; ?>">SQL Server مدیریت</a>
+                        <a href="windows.php" class="nav-link">نسخه ویندوز</a>
+                    </nav>
                 </header>
                 
                 <main class="dashboard-container" id="dashboard">
@@ -192,6 +202,14 @@ class SabaApp {
         </body>
         </html>
         <?php
+    }
+    
+    /**
+     * نمایش رابط مدیریت SQL Server
+     */
+    private function showSSMS() {
+        // فایل ssms.html را بارگذاری می‌کنیم
+        include 'ssms.html';
     }
     
     /**

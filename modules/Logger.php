@@ -15,7 +15,14 @@ class Logger
     private function __construct() 
     {
         $this->createLogDirectory();
-        $this->logFile = $this->logDir . '/sync_' . date('Y-m-d') . '.log';
+        $logFolderName = 'new2';
+        
+        // Create a subdirectory for better organization
+        if (!file_exists($this->logDir . '/' . $logFolderName)) {
+            mkdir($this->logDir . '/' . $logFolderName, 0755, true);
+        }
+        
+        $this->logFile = $this->logDir . '/' . $logFolderName . '/sync_' . date('Y-m-d') . '.log';
     }
     
     /**

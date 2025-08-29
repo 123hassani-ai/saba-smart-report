@@ -1,9 +1,10 @@
 @echo off
 chcp 65001 > nul
-title COM Extension Activation Helper
+title COM Extension Activation Helper - SQL Server Connection Tool
 
 echo ================================================
 echo    COM Extension Activation Helper
+echo    SQL Server Connection Tool for Windows
 echo ================================================
 echo.
 
@@ -11,11 +12,18 @@ echo Checking PHP configuration...
 php -r "echo 'PHP Version: ' . PHP_VERSION . PHP_EOL;" 2>nul
 php -r "echo 'PHP INI File: ' . php_ini_loaded_file() . PHP_EOL;" 2>nul
 php -r "echo 'Extension Dir: ' . PHP_EXTENSION_DIR . PHP_EOL;" 2>nul
+echo.
 
 echo.
 echo Checking COM Extension...
 for /f %%i in ('php -r "echo class_exists('COM') ? 'YES' : 'NO';" 2^>nul') do set COM_STATUS=%%i
 echo COM Available: %COM_STATUS%
+
+echo.
+echo Checking SQL Server drivers...
+php -r "echo 'PDO drivers: ' . implode(', ', PDO::getAvailableDrivers()) . PHP_EOL;" 2>nul
+php -r "echo 'SQLSRV extension: ' . (extension_loaded('sqlsrv') ? 'YES' : 'NO') . PHP_EOL;" 2>nul
+php -r "echo 'PDO_SQLSRV extension: ' . (extension_loaded('pdo_sqlsrv') ? 'YES' : 'NO') . PHP_EOL;" 2>nul
 
 echo.
 echo Checking DLL files...
@@ -38,6 +46,7 @@ if "%COM_STATUS%"=="YES" (
     echo    - Check SQL Server is running
     echo    - Verify connection credentials
     echo    - Check Windows Firewall
+    echo    - Ensure SQL Server Browser service is running
 ) else (
     echo ❌ COM Extension is NOT active
     echo.
@@ -52,11 +61,20 @@ echo.
 echo ================================================
 
 echo.
-set /p choice=Press [1] to open php.ini, [2] to test connection, [3] to exit: 
+echo Menu Options:
+echo [1] Open php.ini file
+echo [2] Test SQL Server connection
+echo [3] Check Windows services
+echo [4] Diagnostic details
+echo [5] Exit
+echo.
+set /p choice=Enter your choice (1-5): 
 
 if "%choice%"=="1" goto OPEN_INI
 if "%choice%"=="2" goto TEST_CONNECTION
-if "%choice%"=="3" goto EXIT
+if "%choice%"=="3" goto CHECK_SERVICES
+if "%choice%"=="4" goto DIAGNOSTICS
+if "%choice%"=="5" goto EXIT
 
 echo Invalid choice
 goto EXIT
@@ -69,7 +87,11 @@ if exist "%INI_PATH%" (
 ) else (
     echo php.ini file not found: %INI_PATH%
 )
-goto EXIT
+echo.
+echo Press any key to return to the menu...
+pause > nul
+cls
+goto :EOF
 
 :TEST_CONNECTION
 echo.
@@ -120,9 +142,59 @@ try {
     echo '❌ Connection failed: ' . \$e->getMessage() . PHP_EOL;
 }
 " 2>nul
-goto EXIT
+
+echo.
+echo Press any key to return to the menu...
+pause > nul
+cls
+goto :EOF
+
+:CHECK_SERVICES
+echo.
+echo Checking SQL Server related services...
+echo.
+echo SQL Server Services:
+sc query MSSQLSERVER | findstr "STATE"
+sc query SQLSERVERAGENT | findstr "STATE" 
+sc query SQLBrowser | findstr "STATE"
+echo.
+echo SQL Server Browser is essential for named instances!
+echo If service shows STOPPED, run this command as Administrator:
+echo sc start SQLBrowser
+echo.
+echo Press any key to return to the menu...
+pause > nul
+cls
+goto :EOF
+
+:DIAGNOSTICS
+echo.
+echo ================================================
+echo    Windows Diagnostic Information
+echo ================================================
+echo.
+echo Checking System Environment:
+systeminfo | findstr /B /C:"OS Name" /C:"OS Version" /C:"System Type"
+echo.
+echo Network Configuration:
+ipconfig | findstr /B /C:"   IPv4 Address" /C:"   Default Gateway" /C:"   DNS Servers"
+echo.
+echo Firewall Status:
+netsh advfirewall show allprofiles state
+echo.
+echo Checking SQL Server TCP Ports:
+netstat -ano | findstr ":1433"
+echo.
+echo Run these commands if SQL Server port is blocked:
+echo netsh advfirewall firewall add rule name="SQL Server" dir=in action=allow protocol=TCP localport=1433
+echo netsh advfirewall firewall add rule name="SQL Browser" dir=in action=allow protocol=UDP localport=1434
+echo.
+echo Press any key to return to the menu...
+pause > nul
+cls
+goto :EOF
 
 :EXIT
 echo.
 echo Goodbye!
-pause
+exit /b 0

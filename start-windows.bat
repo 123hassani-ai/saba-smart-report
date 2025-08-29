@@ -1,26 +1,8 @@
 @echo off
 chcp 65001 > nul
-title Saba Reportingecho [1] 🌐 Simple Dashboard (Windows 7 Compatible)
-echo [2] 🚀 Full Dashboard (Requires COM Extension)
-echo [3] 🔧 Windows Diagnostic Tool  
-echo [4] 🔍 SQL Server Debug Tool
-echo [5] ⚡ Quick Connection Test
-echo [6] 📊 System Status
-echo [7] 📝 Edit Configuration
-echo [8] 🛠️ Activate COM Extension
-echo [9] 🚪 Exit
-echo.
-set /p choice=👉 Enter your choice (1-9): 
+title Saba Reporting System - Windows
 
-if "%choice%"=="1" goto SIMPLE
-if "%choice%"=="2" goto FULL
-if "%choice%"=="3" goto DIAG
-if "%choice%"=="4" goto SQL_DEBUG
-if "%choice%"=="5" goto TEST
-if "%choice%"=="6" goto STATUS
-if "%choice%"=="7" goto CONFIG
-if "%choice%"=="8" goto ACTIVATE_COM
-if "%choice%"=="9" goto EXITecho.
+echo.
 echo ================================================
 echo    🚀 Saba Reporting System - Windows
 echo ================================================
@@ -41,6 +23,7 @@ echo.
 
 REM Create directories
 if not exist "logs" mkdir logs
+if not exist "logs\new2" mkdir logs\new2
 if not exist "temp" mkdir temp
 if not exist "config" mkdir config
 
@@ -52,9 +35,66 @@ if not exist "config.json" (
     ) else (
         echo ❌ No config file found
         echo Creating basic config...
-        echo {"sql_server":{"server":"localhost","database":"test"},"cloud":{"host":"localhost"}} > config.json
+        echo {"sql_server":{"server":"localhost\\SQLEXPRESS","database":"SabaDB","username":"sa","password":"555","connection_method":"com"},"cloud":{"host":"93.127.180.221","database":"reports_database"}} > config.json
     )
 )
+
+REM Enable COM extension
+echo Checking PHP COM extension...
+php -r "echo extension_loaded('com_dotnet') ? '✅ COM extension is loaded' : '❌ COM extension is not loaded';"
+echo.
+        :MENU
+cls
+echo.
+echo ================================================
+echo              🎯 MAIN MENU
+echo ================================================
+echo.
+echo [1] 🌐 Simple Dashboard (Windows 7 Compatible)
+echo [2] 🚀 Full Dashboard (Requires COM Extension)
+echo [3] 🔧 Windows Diagnostic Tool  
+echo [4] 🔍 SQL Server Debug Tool
+echo [5] ⚡ Quick Connection Test
+echo [6] 📊 System Status
+echo [7] 📝 Edit Configuration
+echo [8] 🛠️ Activate COM Extension
+echo [9] 🚪 Exit
+echo.
+set /p choice=👉 Enter your choice (1-9): 
+
+if "%choice%"=="1" goto SIMPLE
+if "%choice%"=="2" goto FULL
+if "%choice%"=="3" goto DIAG
+if "%choice%"=="4" goto SQL_DEBUG
+if "%choice%"=="5" goto TEST
+if "%choice%"=="6" goto STATUS
+if "%choice%"=="7" goto CONFIG
+if "%choice%"=="8" goto ACTIVATE_COM
+if "%choice%"=="9" goto EXIT
+
+echo ❌ Invalid choice
+goto MENU
+
+:SIMPLE
+echo.
+echo Starting Simple Dashboard (Windows 7 Compatible)...
+echo.
+echo Open in browser: http://localhost:8080/windows-simple.php
+start "" "http://localhost:8080/windows-simple.php"
+php -S localhost:8080 -t .
+goto MENU
+
+:FULL
+echo.
+echo Starting Full Dashboard (COM Extension)...
+echo.
+echo Checking COM extension...
+php -r "echo extension_loaded('com_dotnet') ? '✅ COM extension is loaded' : '❌ COM extension is not loaded';"
+echo.
+echo Open in browser: http://localhost:8080/windows.php
+start "" "http://localhost:8080/windows.php"
+php -S localhost:8080 -t .
+goto MENU
 
 :MENU
 cls

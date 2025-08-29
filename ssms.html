@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدیریت پایگاه‌داده SQL Server</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/sql-server.css">
+    <!-- فونت ایران سنس (یا وزیر) -->
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+    <style>
+        body {
+            font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .card {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .card-header {
+            background-color: #0078d4;
+            color: white;
+            padding: 15px 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card-body {
+            padding: 0;
+        }
+        .server-info {
+            display: flex;
+            background-color: #f0f7ff;
+            padding: 10px 15px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 14px;
+        }
+        .server-info-item {
+            margin-left: 20px;
+            padding-left: 20px;
+            border-left: 1px solid #ccc;
+        }
+        .server-info-item:last-child {
+            border-left: none;
+        }
+        .server-info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        #table-viewer {
+            height: 70vh;
+            overflow: hidden;
+        }
+        .tab-container {
+            border-bottom: 1px solid #e0e0e0;
+            background-color: #f5f5f5;
+        }
+        .tabs {
+            display: flex;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-right: 1px solid #e0e0e0;
+            background-color: #f0f0f0;
+            transition: background-color 0.2s;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 2px solid #0078d4;
+        }
+        .tab:hover:not(.active) {
+            background-color: #e8e8e8;
+        }
+        .tab-content {
+            padding: 0;
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* استایل برای پیام‌های خطا */
+        .error-message {
+            background-color: #fde8e8;
+            color: #d93025;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .error-message::before {
+            content: "⚠️";
+            margin-left: 10px;
+        }
+        
+        /* استایل برای پیام‌های موفقیت */
+        .success-message {
+            background-color: #e6f4ea;
+            color: #137333;
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+        }
+        .success-message::before {
+            content: "✅";
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>مدیریت پایگاه‌داده SQL Server</h1>
+        
+        <div class="card">
+            <div class="card-header">
+                <div>اطلاعات سرور</div>
+                <div>
+                    <button id="refresh-status" class="ssms-button primary">بازخوانی اطلاعات</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="server-info" id="server-info">
+                    <div class="server-info-item">
+                        <span class="server-info-label">وضعیت اتصال:</span>
+                        <span id="connection-status">در حال بررسی...</span>
+                    </div>
+                    <div class="server-info-item">
+                        <span class="server-info-label">نام سرور:</span>
+                        <span id="server-name">-</span>
+                    </div>
+                    <div class="server-info-item">
+                        <span class="server-info-label">نسخه:</span>
+                        <span id="server-version">-</span>
+                    </div>
+                    <div class="server-info-item">
+                        <span class="server-info-label">پایگاه‌داده:</span>
+                        <span id="database-name">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <div>مدیریت جداول</div>
+                <div>
+                    <button id="refresh-tables" class="ssms-button">بازخوانی جداول</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="tab-container">
+                    <ul class="tabs">
+                        <li class="tab active" data-tab="data">داده‌ها</li>
+                        <li class="tab" data-tab="structure">ساختار</li>
+                        <li class="tab" data-tab="query">کوئری</li>
+                    </ul>
+                </div>
+                
+                <!-- محتوای تب‌ها -->
+                <div class="tab-content active" id="data-tab">
+                    <div id="table-viewer"></div>
+                </div>
+                
+                <div class="tab-content" id="structure-tab">
+                    <div id="structure-viewer" class="card-body" style="padding: 20px;"></div>
+                </div>
+                
+                <div class="tab-content" id="query-tab">
+                    <div class="card-body" style="padding: 20px;">
+                        <textarea id="sql-query" style="width: 100%; height: 150px; margin-bottom: 10px; font-family: monospace; direction: ltr;" 
+                            placeholder="-- کوئری SQL خود را اینجا وارد کنید"></textarea>
+                        <button id="run-query" class="ssms-button primary">اجرای کوئری</button>
+                        <div id="query-result" style="margin-top: 20px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/sql-server-table.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // تابع نمایش خطا
+            function showError(message) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                
+                // حذف پیام‌های قبلی
+                document.querySelectorAll('.error-message').forEach(el => el.remove());
+                
+                // افزودن پیام جدید
+                document.querySelector('.container').prepend(errorDiv);
+                
+                // حذف خودکار بعد از 5 ثانیه
+                setTimeout(() => errorDiv.remove(), 5000);
+            }
+            
+            // تابع نمایش پیام موفقیت
+            function showSuccess(message) {
+                const successDiv = document.createElement('div');
+                successDiv.className = 'success-message';
+                successDiv.textContent = message;
+                
+                // حذف پیام‌های قبلی
+                document.querySelectorAll('.success-message').forEach(el => el.remove());
+                
+                // افزودن پیام جدید
+                document.querySelector('.container').prepend(successDiv);
+                
+                // حذف خودکار بعد از 3 ثانیه
+                setTimeout(() => successDiv.remove(), 3000);
+            }
+            
+            // تنظیم تب‌ها
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // حذف کلاس active از همه تب‌ها
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    
+                    // افزودن کلاس active به تب کلیک شده
+                    this.classList.add('active');
+                    
+                    // حذف کلاس active از همه محتواهای تب
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    
+                    // افزودن کلاس active به محتوای تب مربوطه
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId + '-tab').classList.add('active');
+                });
+            });
+            
+            // راه‌اندازی نمایش‌دهنده جدول SQL Server
+            const tableViewer = new SQLServerTableViewer({
+                container: 'table-viewer',
+                pageSize: 50,
+                apiBase: 'windows.php?action=api&endpoint=',
+                rtl: true,
+                onError: showError,
+                onTableChange: function(tableName) {
+                    // به‌روزرسانی نمایش ساختار جدول
+                    if (tableName) {
+                        loadTableStructure(tableName);
+                    } else {
+                        document.getElementById('structure-viewer').innerHTML = '';
+                    }
+                }
+            });
+            
+            // دریافت وضعیت سرور
+            function loadServerStatus() {
+                fetch('windows.php?action=api&endpoint=status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            const statusElement = document.getElementById('connection-status');
+                            
+                            if (data.sql_server_connected) {
+                                statusElement.textContent = 'متصل ✅';
+                                statusElement.style.color = '#137333';
+                                
+                                // نمایش اطلاعات سرور
+                                if (data.sql_server_info) {
+                                    document.getElementById('server-name').textContent = data.sql_server_info.server || '-';
+                                    document.getElementById('database-name').textContent = data.sql_server_info.database || '-';
+                                    document.getElementById('server-version').textContent = data.sql_server_info.version || '-';
+                                }
+                            } else {
+                                statusElement.textContent = 'عدم اتصال ❌';
+                                statusElement.style.color = '#d93025';
+                            }
+                        } else {
+                            showError('خطا در دریافت وضعیت سرور');
+                        }
+                    })
+                    .catch(error => {
+                        showError('خطا در ارتباط با سرور: ' + error.message);
+                    });
+            }
+            
+            // دریافت ساختار جدول
+            function loadTableStructure(tableName) {
+                const structureViewer = document.getElementById('structure-viewer');
+                structureViewer.innerHTML = '<div style="text-align: center; padding: 20px;">در حال بارگذاری ساختار جدول...</div>';
+                
+                fetch(`windows.php?action=api&endpoint=table_structure&table=${tableName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.data && data.data.length > 0) {
+                            let html = `
+                                <h3>ساختار جدول ${tableName}</h3>
+                                <table class="ssms-table ssms-structure-table" style="width: 100%">
+                                    <thead>
+                                        <tr>
+                                            <th>نام ستون</th>
+                                            <th>نوع داده</th>
+                                            <th>طول/دقت</th>
+                                            <th>Nullable</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                            `;
+                            
+                            data.data.forEach(column => {
+                                html += `
+                                    <tr>
+                                        <td class="column-name">${column.name}</td>
+                                        <td class="column-type">${column.type.toUpperCase()}</td>
+                                        <td class="column-length">${column.length > 0 ? column.length : '-'}</td>
+                                        <td class="column-nullable" style="text-align: center">${column.nullable ? '✓' : '✗'}</td>
+                                    </tr>
+                                `;
+                            });
+                            
+                            html += `
+                                    </tbody>
+                                </table>
+                            `;
+                            
+                            structureViewer.innerHTML = html;
+                        } else {
+                            structureViewer.innerHTML = '<div class="error-message">خطا در دریافت ساختار جدول</div>';
+                        }
+                    })
+                    .catch(error => {
+                        structureViewer.innerHTML = `<div class="error-message">خطا در ارتباط با سرور: ${error.message}</div>`;
+                    });
+            }
+            
+            // اجرای کوئری SQL
+            document.getElementById('run-query').addEventListener('click', function() {
+                const queryText = document.getElementById('sql-query').value.trim();
+                const resultDiv = document.getElementById('query-result');
+                
+                if (!queryText) {
+                    showError('لطفاً یک کوئری SQL وارد کنید');
+                    return;
+                }
+                
+                resultDiv.innerHTML = '<div style="text-align: center; padding: 20px;">در حال اجرای کوئری...</div>';
+                
+                // ارسال کوئری به سرور
+                fetch('windows.php?action=api&endpoint=query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `query=${encodeURIComponent(queryText)}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.data && data.data.length > 0) {
+                            // نمایش نتیجه به صورت جدول
+                            let html = `
+                                <div style="overflow-x: auto;">
+                                <table class="ssms-table" style="width: 100%">
+                                    <thead>
+                                        <tr>
+                            `;
+                            
+                            // ایجاد سرستون‌ها
+                            const columns = Object.keys(data.data[0]);
+                            columns.forEach(column => {
+                                html += `<th>${column}</th>`;
+                            });
+                            
+                            html += `
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                            `;
+                            
+                            // ایجاد ردیف‌ها
+                            data.data.forEach(row => {
+                                html += '<tr>';
+                                columns.forEach(column => {
+                                    const value = row[column];
+                                    if (value === null) {
+                                        html += '<td class="null-value">NULL</td>';
+                                    } else {
+                                        html += `<td>${value}</td>`;
+                                    }
+                                });
+                                html += '</tr>';
+                            });
+                            
+                            html += `
+                                    </tbody>
+                                </table>
+                                </div>
+                                <div style="margin-top: 10px; text-align: left; direction: ltr;">
+                                    ${data.data.length} record(s) returned
+                                </div>
+                            `;
+                            
+                            resultDiv.innerHTML = html;
+                        } else if (data.rowsAffected !== undefined) {
+                            // نمایش تعداد رکوردهای تحت تأثیر (برای دستورات INSERT، UPDATE، DELETE)
+                            resultDiv.innerHTML = `
+                                <div class="success-message">
+                                    عملیات با موفقیت انجام شد. ${data.rowsAffected} رکورد تحت تأثیر قرار گرفت.
+                                </div>
+                            `;
+                        } else {
+                            resultDiv.innerHTML = '<div class="success-message">عملیات با موفقیت انجام شد.</div>';
+                        }
+                    } else {
+                        resultDiv.innerHTML = `<div class="error-message">خطا در اجرای کوئری: ${data.error || 'خطای نامشخص'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    resultDiv.innerHTML = `<div class="error-message">خطا در ارتباط با سرور: ${error.message}</div>`;
+                });
+            });
+            
+            // رویدادها
+            document.getElementById('refresh-status').addEventListener('click', loadServerStatus);
+            document.getElementById('refresh-tables').addEventListener('click', function() {
+                tableViewer.loadTables();
+                showSuccess('لیست جداول به‌روزرسانی شد');
+            });
+            
+            // بارگذاری اطلاعات اولیه
+            loadServerStatus();
+        });
+    </script>
+</body>
+</html>

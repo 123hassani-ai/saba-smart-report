@@ -29,25 +29,45 @@ fi
 
 # نصب dependencies
 echo -e "${BLUE}📦 Installing ODBC dependencies...${NC}"
-brew install unixodbc freetds
+brew install unixodbc freetds php-pdo_dblib
 
-# بررسی وجود تنظیمات
-if [ ! -f "config-mac.json" ]; then
-    echo -e "${YELLOW}⚠️ Creating default config file...${NC}"
-    cat > config-mac.json << EOF
-{
-    "sql_server": {
-        "server": "123.123.1.2",
-        "database": "YOUR_DATABASE_NAME",
-        "username": "sa",
-        "password": "YOUR_PASSWORD",
-        "port": "1433",
-        "connection_method": "odbc"
-    },
-    "cloud": {
-        "host": "YOUR_VPS_IP",
-        "database": "reports_database",
-        "username": "sync_user",
+# بررسی وجود extension های مورد نیاز PHP
+echo -e "${BLUE}🔍 Checking PHP extensions...${NC}"
+if php -m | grep -q "pdo_dblib"; then
+    echo -e "${GREEN}✅ PHP PDO DBLib extension found${NC}"
+else
+    echo -e "${YELLOW}⚠️ PHP PDO DBLib extension not found, trying to install...${NC}"
+    brew install php-pdo_dblib
+    echo -e "${YELLOW}⚠️ You may need to manually enable pdo_dblib in php.ini${NC}"
+fi
+
+# تنظیم فایل های ODBC
+echo -e "${BLUE}📝 Setting up ODBC configuration...${NC}"
+cat > odbcinst.ini << EOF
+[FreeTDS]
+Description = FreeTDS Driver
+Driver = $(brew --prefix)/lib/libtdsodbc.so
+Setup = $(brew --prefix)/lib/libtdsodbc.so
+UsageCount = 1
+EOF
+
+cat > odbc.ini << EOF
+[ODBC Data Sources]
+SQLServer = FreeTDS
+
+[SQLServer]
+Driver = $(brew --prefix)/lib/libtdsodbc.so
+Description = SQL Server via FreeTDS
+Server = C123-SRV
+Port = 1433
+Database = Saba404
+TDS_Version = 8.0
+Uid = sa
+Pwd = 555
+
+[Default]
+Driver = $(brew --prefix)/lib/libtdsodbc.so
+EOF
         "password": "YOUR_MYSQL_PASSWORD",
         "port": "3306"
     },

@@ -30,12 +30,43 @@ class SQLServerConnection extends BaseModule
             
             if ($method === 'com') {
                 return $this->connectViaCOM();
+            } elseif ($method === 'pdo') {
+                return $this->connectViaPDO();
             } else {
                 return $this->connectViaODBC();
             }
             
         } catch (Exception $e) {
             $this->log("خطا در اتصال به SQL Server: " . $e->getMessage(), 'error');
+            throw $e;
+        }
+    }
+    
+    /**
+     * اتصال مستقیم از طریق PDO
+     */
+    private function connectViaPDO() 
+    {
+        $isMac = (PHP_OS_FAMILY === 'Darwin');
+        
+        try {
+            if ($isMac) {
+                // استفاده از FreeTDS برای اتصال به SQL Server در macOS
+                $dsn = "dblib:host={$this->connectionInfo['server']}:{$this->connectionInfo['port']};dbname={$this->connectionInfo['database']}";
+                $this->connection = new PDO($dsn, $this->connectionInfo['username'], $this->connectionInfo['password']);
+                $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $this->log("✅ اتصال موفق به SQL Server از طریق PDO dblib در macOS");
+                return true;
+            } else {
+                // اتصال استاندارد برای سایر سیستم‌ها
+                $dsn = "sqlsrv:Server={$this->connectionInfo['server']};Database={$this->connectionInfo['database']}";
+                $this->connection = new PDO($dsn, $this->connectionInfo['username'], $this->connectionInfo['password']);
+                $this->connection->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+                $this->log("✅ اتصال موفق به SQL Server از طریق PDO sqlsrv");
+                return true;
+            }
+        } catch (Exception $e) {
+            $this->log("⚠️ تلاش اتصال PDO ناموفق: " . $e->getMessage(), 'warning');
             throw $e;
         }
     }

@@ -114,30 +114,76 @@ class Dashboard {
     }
 
     /**
-     * آپدیت جداول اخیر
+     * آپدیت جداول اخیر (نسخه بهینه شده)
      */
     updateRecentTables(tables) {
         const container = document.getElementById('recent-tables');
         if (!container) return;
 
-        container.innerHTML = '';
+        if (!tables || tables.length === 0) {
+            container.innerHTML = '<div class="no-data">جدولی یافت نشد</div>';
+            return;
+        }
+
+        let html = '<div class="tables-grid">';
         
-        tables.forEach(table => {
-            const tableRow = document.createElement('div');
-            tableRow.className = 'table-row';
-            tableRow.innerHTML = `
-                <div class="table-info">
-                    <strong>${table.name}</strong>
-                    <span class="table-count">${table.count} رکورد</span>
-                </div>
-                <div class="table-status">
-                    <span class="status-badge ${table.status === 'synced' ? 'success' : 'warning'}">
-                        ${table.status === 'synced' ? 'همگام‌سازی شده' : 'در انتظار'}
-                    </span>
+        tables.slice(0, 10).forEach(table => {
+            const recordsDisplay = table.records === '?' 
+                ? `<span class="record-count loading" data-table="${table.name}">در حال بارگذاری...</span>`
+                : `<span class="record-count">${this.formatNumber(table.records)} رکورد</span>`;
+                
+            html += `
+                <div class="table-card" data-table="${table.name}">
+                    <div class="table-name">${table.name}</div>
+                    <div class="table-info">
+                        ${recordsDisplay}
+                        <button class="btn-small load-count" data-table="${table.name}" 
+                                style="${table.records === '?' ? '' : 'display:none'}">
+                            🔄 بارگذاری
+                        </button>
+                    </div>
                 </div>
             `;
-            container.appendChild(tableRow);
         });
+        
+        html += '</div>';
+        container.innerHTML = html;
+        
+        // اتصال رویداد برای دکمه‌های بارگذاری تعداد
+        container.querySelectorAll('.load-count').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                this.loadTableCount(e.target.dataset.table);
+            });
+        });
+    }
+    
+    /**
+     * بارگذاری تعداد رکوردهای یک جدول خاص
+     */
+    async loadTableCount(tableName) {
+        try {
+            const btn = document.querySelector(`[data-table="${tableName}"].load-count`);
+            const countSpan = document.querySelector(`[data-table="${tableName}"].record-count`);
+            if (btn) btn.textContent = '⏳';
+            if (countSpan) countSpan.textContent = 'در حال محاسبه...';
+            const response = await this.apiCall(`table_count?table=${encodeURIComponent(tableName)}`);
+            if (response.success) {
+                if (countSpan) {
+                    countSpan.textContent = `${this.formatNumber(response.count)} رکورد`;
+                    countSpan.classList.remove('loading');
+                }
+                if (btn) btn.style.display = 'none';
+            } else {
+                if (countSpan) countSpan.textContent = 'خطا در محاسبه';
+                if (btn) btn.textContent = '🔄 دوباره';
+            }
+        } catch (error) {
+            console.error('Error loading table count:', error);
+            const countSpan = document.querySelector(`[data-table="${tableName}"].record-count`);
+            const btn = document.querySelector(`[data-table="${tableName}"].load-count`);
+            if (countSpan) countSpan.textContent = 'خطا';
+            if (btn) btn.textContent = '🔄 دوباره';
+        }
     }
 
     /**

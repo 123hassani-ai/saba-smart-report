@@ -8,6 +8,160 @@
     --warning-gradient: linear-gradient(45deg, #f7971e, #ffd200);
     --card-background: rgba(255,255,255,0.95);
     --text-primary: #333;
+
+/* =================================
+   بخش جداول بهینه شده
+   ================================= */
+
+.tables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.table-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 1rem;
+    transition: all 0.3s ease;
+}
+
+.table-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.table-name {
+    font-weight: 600;
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+.btn-count {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-count:hover {
+    background: rgba(76, 175, 80, 0.3);
+    transform: scale(1.1);
+}
+
+.btn-count:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.record-count {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0.25rem 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    display: inline-block;
+}
+
+.record-count.loading {
+    background: rgba(255, 193, 7, 0.2);
+    color: #FFC107;
+    animation: pulse 1.5s infinite;
+}
+
+.record-count.error {
+    background: rgba(244, 67, 54, 0.2);
+    color: #F44336;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* =================================
+   بخش محتوا
+   ================================= */
+
+.content-section {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    padding: 2rem;
+    margin: 2rem 0;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.section-header h2 {
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.section-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.section-actions .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.loading-message {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.7);
+    font-style: italic;
+    padding: 2rem;
+}
+
+.no-data {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 2rem;
+    font-size: 1rem;
+}
+
+/* =================================
+   حالت‌های مختلف status
+   ================================= */
+
+.status-connected {
+    color: #4CAF50;
+}
+
+.status-disconnected {
+    color: #F44336;
+}
     --text-secondary: #666;
     --border-color: #ddd;
     --shadow-light: 0 4px 15px rgba(0,0,0,0.1);

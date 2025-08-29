@@ -16,7 +16,24 @@ class ConfigManager extends BaseModule
     public function __construct() 
     {
         parent::__construct();
-        $this->configFile = __DIR__ . '/../../config.json';
+        
+        // بررسی سیستم عامل و انتخاب فایل تنظیمات مناسب
+        if (PHP_OS_FAMILY === 'Windows') {
+            $this->configFile = __DIR__ . '/../../config-windows.json';
+            // اگر فایل ویندوز وجود نداشت، از فایل عادی استفاده می‌کنیم
+            if (!file_exists($this->configFile)) {
+                $this->configFile = __DIR__ . '/../../config.json';
+            }
+        } elseif (PHP_OS_FAMILY === 'Darwin') {
+            $this->configFile = __DIR__ . '/../../config-mac.json';
+            // اگر فایل مک وجود نداشت، از فایل عادی استفاده می‌کنیم
+            if (!file_exists($this->configFile)) {
+                $this->configFile = __DIR__ . '/../../config.json';
+            }
+        } else {
+            $this->configFile = __DIR__ . '/../../config.json';
+        }
+        
         $this->initializeDefaultConfig();
     }
     

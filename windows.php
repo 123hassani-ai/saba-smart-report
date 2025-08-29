@@ -134,33 +134,48 @@ class SabaWindowsApp {
         $database = $sqlConfig['database'];
         $username = $sqlConfig['username'] ?? '';
         $password = $sqlConfig['password'] ?? '';
+        $integrated = ($sqlConfig['integrated_security'] ?? false) ? true : false;
         
         try {
             $this->logger->info("Creating COM ADODB.Connection object...");
             
-            // استفاده از ADO Connection - مشابه sync-service-odbc.php
+            // استفاده از ADO Connection
             $conn = new COM("ADODB.Connection");
             
             // استفاده از connection string بهتر
             $connectionString = "Provider=SQLOLEDB;Data Source={$server};Initial Catalog={$database};";
             
-            if (!empty($username)) {
+            if ($integrated) {
+                $connectionString .= "Integrated Security=SSPI;";
+                $this->logger->info("Using Windows Authentication (Integrated Security)");
+            } else if (!empty($username)) {
                 $connectionString .= "User ID={$username};Password={$password};";
                 $this->logger->info("Using SQL Server Authentication for user: {$username}");
             } else {
                 $connectionString .= "Integrated Security=SSPI;";
-                $this->logger->info("Using Windows Authentication");
+                $this->logger->info("Using Windows Authentication (Default)");
             }
             
-            $this->logger->info("Connection String: " . str_replace($password, '***', $connectionString));
+            // Log the connection string but hide the password
+            $safeString = str_replace($password, "******", $connectionString);
+            $this->logger->info("Connection String: " . $safeString);
             $this->logger->info("Attempting to connect...");
             
+            // Open the connection
             $conn->Open($connectionString);
+            
+            // Test the connection
+            $rs = $conn->Execute("SELECT @@VERSION as version");
+            if (!$rs->EOF) {
+                $version = $rs->Fields("version")->Value;
+                $this->logger->info("Connected to SQL Server: " . substr($version, 0, 50) . "...");
+            }
             
             // ذخیره COM object مستقیماً
             $this->sqlServerConn = $conn;
             
             $this->logger->info("✅ COM Connection established successfully");
+            return true;
             
         } catch (Exception $e) {
             $this->sqlServerConn = null;
@@ -412,9 +427,9 @@ class SabaWindowsApp {
     }
     
     /**
-     * دریافت جداول SQL Server
+     * دریافت جداول SQL Server (نسخه سریع - بدون شمارش رکوردها)
      */
-    private function getSQLServerTables() {
+    private function getSQLServerTables($includeRecordCount = false) {
         $tables = [];
         
         try {
@@ -437,20 +452,22 @@ class SabaWindowsApp {
                 while (!$rs->EOF) {
                     $tableName = $rs->Fields("TABLE_NAME")->Value;
                     
-                    // Get record count
-                    try {
-                        $countQuery = "SELECT COUNT(*) as cnt FROM [{$tableName}]";
-                        $countRs = $this->sqlServerConn->Execute($countQuery);
-                        $recordCount = $countRs->Fields("cnt")->Value;
-                    } catch (Exception $e) {
-                        $recordCount = 0;
+                    $table = ['name' => $tableName];
+                    
+                    // فقط در صورت درخواست، تعداد رکوردها را محاسبه کن
+                    if ($includeRecordCount) {
+                        try {
+                            $countQuery = "SELECT COUNT(*) as cnt FROM [{$tableName}]";
+                            $countRs = $this->sqlServerConn->Execute($countQuery);
+                            $table['records'] = $countRs->Fields("cnt")->Value;
+                        } catch (Exception $e) {
+                            $table['records'] = 0;
+                        }
+                    } else {
+                        $table['records'] = '?'; // نشان دهنده عدم محاسبه
                     }
                     
-                    $tables[] = [
-                        'name' => $tableName,
-                        'records' => $recordCount
-                    ];
-                    
+                    $tables[] = $table;
                     $rs->MoveNext();
                 }
             } else {
@@ -458,18 +475,21 @@ class SabaWindowsApp {
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $tableName = $row['TABLE_NAME'];
                     
-                    try {
-                        $countStmt = $this->sqlServerConn->query("SELECT COUNT(*) as cnt FROM [{$tableName}]");
-                        $countRow = $countStmt->fetch(PDO::FETCH_ASSOC);
-                        $recordCount = $countRow['cnt'];
-                    } catch (Exception $e) {
-                        $recordCount = 0;
+                    $table = ['name' => $tableName];
+                    
+                    if ($includeRecordCount) {
+                        try {
+                            $countStmt = $this->sqlServerConn->query("SELECT COUNT(*) as cnt FROM [{$tableName}]");
+                            $countRow = $countStmt->fetch(PDO::FETCH_ASSOC);
+                            $table['records'] = $countRow['cnt'];
+                        } catch (Exception $e) {
+                            $table['records'] = 0;
+                        }
+                    } else {
+                        $table['records'] = '?';
                     }
                     
-                    $tables[] = [
-                        'name' => $tableName,
-                        'records' => $recordCount
-                    ];
+                    $tables[] = $table;
                 }
             }
             
@@ -480,6 +500,222 @@ class SabaWindowsApp {
         return $tables;
     }
     
+    /**
+     * دریافت تعداد رکوردهای یک جدول خاص
+     */
+    private function getTableRecordCount($tableName) {
+        try {
+            if (!$this->sqlServerConn) {
+                return 0;
+            }
+            
+            $countQuery = "SELECT COUNT(*) as cnt FROM [{$tableName}]";
+            
+            if ($this->sqlServerConn instanceof COM) {
+                $countRs = $this->sqlServerConn->Execute($countQuery);
+                return $countRs->Fields("cnt")->Value;
+            } else {
+                $countStmt = $this->sqlServerConn->query($countQuery);
+                $countRow = $countStmt->fetch(PDO::FETCH_ASSOC);
+                return $countRow['cnt'];
+            }
+        } catch (Exception $e) {
+            $this->logger->error("Failed to count records for table {$tableName}: " . $e->getMessage());
+            return 0;
+        }
+    }
+    
+    /**
+     * دریافت نسخه SQL Server
+     */
+    private function getSQLServerVersion() {
+        try {
+            if (!$this->sqlServerConn) {
+                return 'N/A';
+            }
+            
+            $query = "SELECT @@VERSION as version";
+            
+            if ($this->sqlServerConn instanceof COM) {
+                $rs = $this->sqlServerConn->Execute($query);
+                $version = $rs->Fields("version")->Value;
+                
+                // استخراج نسخه اصلی
+                if (preg_match('/SQL Server\s+(\d+\.\d+)/', $version, $matches)) {
+                    return 'SQL Server ' . $matches[1];
+                }
+                
+                return $version;
+            } else {
+                $stmt = $this->sqlServerConn->query($query);
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                // استخراج نسخه اصلی
+                if (preg_match('/SQL Server\s+(\d+\.\d+)/', $row['version'], $matches)) {
+                    return 'SQL Server ' . $matches[1];
+                }
+                
+                return $row['version'];
+            }
+        } catch (Exception $e) {
+            $this->logger->error("Failed to get SQL Server version: " . $e->getMessage());
+            return 'Unknown';
+        }
+    }
+    
+    /**
+     * دریافت اطلاعات سرور Cloud
+     */
+    private function getCloudServerInfo() {
+        try {
+            if (!$this->cloudConn) {
+                return 'N/A';
+            }
+            
+            return $this->cloudConn->getAttribute(PDO::ATTR_SERVER_INFO) ?? 
+                  $this->cloudConn->getAttribute(PDO::ATTR_SERVER_VERSION) ?? 
+                  'MySQL/MariaDB';
+        } catch (Exception $e) {
+            $this->logger->error("Failed to get Cloud server info: " . $e->getMessage());
+            return 'Unknown';
+        }
+    }
+    
+    /**
+     * دریافت ساختار جدول (ستون‌ها و نوع داده‌ها)
+     */
+    private function getTableStructure($tableName) {
+        $columns = [];
+        
+        try {
+            if (!$this->sqlServerConn) {
+                return $columns;
+            }
+            
+            $query = "SELECT 
+                         COLUMN_NAME as name,
+                         DATA_TYPE as type,
+                         COALESCE(CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, -1) as length,
+                         IS_NULLABLE as nullable
+                      FROM 
+                         INFORMATION_SCHEMA.COLUMNS
+                      WHERE 
+                         TABLE_NAME = '{$tableName}'
+                      ORDER BY 
+                         ORDINAL_POSITION";
+                         
+            if ($this->sqlServerConn instanceof COM) {
+                $rs = $this->sqlServerConn->Execute($query);
+                
+                while (!$rs->EOF) {
+                    $columns[] = [
+                        'name' => $rs->Fields("name")->Value,
+                        'type' => $rs->Fields("type")->Value,
+                        'length' => $rs->Fields("length")->Value,
+                        'nullable' => $rs->Fields("nullable")->Value === 'YES'
+                    ];
+                    $rs->MoveNext();
+                }
+            } else {
+                $stmt = $this->sqlServerConn->query($query);
+                
+                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    $columns[] = [
+                        'name' => $row['name'],
+                        'type' => $row['type'],
+                        'length' => $row['length'],
+                        'nullable' => $row['nullable'] === 'YES'
+                    ];
+                }
+            }
+            
+            return $columns;
+            
+        } catch (Exception $e) {
+            $this->logger->error("Failed to get table structure for {$tableName}: " . $e->getMessage());
+            return $columns;
+        }
+    }
+    
+    /**
+     * دریافت داده‌های جدول با پشتیبانی از صفحه‌بندی و مرتب‌سازی
+     */
+    private function getTableDataPaginated($tableName, $page = 1, $limit = 50, $sortColumn = '', $sortOrder = 'ASC') {
+        $data = [];
+        $total = 0;
+        $pages = 1;
+        
+        try {
+            if (!$this->sqlServerConn) {
+                return ['data' => [], 'total' => 0, 'pages' => 1];
+            }
+            
+            // دریافت تعداد کل رکوردها
+            $total = $this->getTableRecordCount($tableName);
+            $pages = ceil($total / $limit);
+            
+            // محاسبه offset
+            $offset = ($page - 1) * $limit;
+            
+            // ساخت کوئری با توجه به نسخه SQL Server
+            // برای SQL Server 2012 به بالا از OFFSET استفاده می‌کنیم
+            if ($sortColumn) {
+                $orderClause = "ORDER BY [{$sortColumn}] {$sortOrder}";
+            } else {
+                $orderClause = "ORDER BY (SELECT NULL)";
+            }
+            
+            $query = "SELECT * FROM [{$tableName}] {$orderClause} 
+                      OFFSET {$offset} ROWS FETCH NEXT {$limit} ROWS ONLY";
+                      
+            // پشتیبانی از نسخه‌های قدیمی‌تر
+            $serverVersion = $this->getSQLServerVersion();
+            if (strpos($serverVersion, '2008') !== false || strpos($serverVersion, '2005') !== false) {
+                if ($page === 1) {
+                    $query = "SELECT TOP {$limit} * FROM [{$tableName}]";
+                    if ($sortColumn) {
+                        $query .= " ORDER BY [{$sortColumn}] {$sortOrder}";
+                    }
+                } else {
+                    // برای نسخه‌های قدیمی‌تر از روش‌های پیچیده‌تری استفاده می‌شود
+                    // که اینجا برای سادگی از آن صرف نظر می‌کنیم
+                    $query = "SELECT TOP {$limit} * FROM [{$tableName}]";
+                    if ($sortColumn) {
+                        $query .= " ORDER BY [{$sortColumn}] {$sortOrder}";
+                    }
+                    $this->logger->warning("Pagination might not work correctly on SQL Server versions below 2012");
+                }
+            }
+            
+            if ($this->sqlServerConn instanceof COM) {
+                $rs = $this->sqlServerConn->Execute($query);
+                
+                while (!$rs->EOF) {
+                    $record = [];
+                    for ($i = 0; $i < $rs->Fields->Count; $i++) {
+                        $field = $rs->Fields($i);
+                        $record[$field->Name] = $field->Value;
+                    }
+                    
+                    $data[] = $record;
+                    $rs->MoveNext();
+                }
+            } else {
+                $stmt = $this->sqlServerConn->query($query);
+                $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+            
+        } catch (Exception $e) {
+            $this->logger->error("Failed to paginate data for table {$tableName}: " . $e->getMessage());
+        }
+        
+        return [
+            'data' => $data,
+            'total' => $total,
+            'pages' => $pages
+        ];
+    }
+
     /**
      * دریافت داده‌های جدول
      */
@@ -627,6 +863,7 @@ class SabaWindowsApp {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>سیستم گزارش‌گیری سبا - ویندوز</title>
+            <link rel="stylesheet" href="assets/css/style.css">
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
                 
@@ -847,26 +1084,37 @@ class SabaWindowsApp {
                         </div>
                     </div>
                     
-                    <div class="status-card">
+                    <div class="status-card" id="tables-summary-card">
                         <h3>📊 آمار جداول</h3>
                         <div class="status-indicator status-connected">
-                            <?php 
-                            $tables = $this->getSQLServerTables();
-                            echo count($tables) . ' جدول';
-                            ?>
+                            <span id="total-tables">در حال بارگذاری...</span>
                         </div>
                         
                         <div class="info-grid">
                             <div class="info-item">
-                                <div class="info-label">کل رکوردها</div>
-                                <div class="info-value">
-                                    <?php 
-                                    $totalRecords = array_sum(array_column($tables, 'records'));
-                                    echo number_format($totalRecords);
-                                    ?>
-                                </div>
+                                <div class="info-label">جداول یافت شده</div>
+                                <div class="info-value" id="tables-found">-</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">وضعیت</div>
+                                <div class="info-value">آماده نمایش</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+                
+                <!-- بخش جداول -->
+                <div class="content-section">
+                    <div class="section-header">
+                        <h2>📋 جداول موجود</h2>
+                        <div class="section-actions">
+                            <button id="refresh-btn" class="btn btn-secondary">🔄 رفرش</button>
+                            <button id="test-connections-btn" class="btn btn-info">🔍 تست اتصالات</button>
+                        </div>
+                    </div>
+                    
+                    <div id="tables-container">
+                        <div class="loading-message">در حال بارگذاری جداول...</div>
                     </div>
                 </div>
                 
@@ -965,6 +1213,14 @@ class SabaWindowsApp {
                         });
                 }
             </script>
+            
+            <!-- Loading Overlay -->
+            <div id="loading-overlay">
+                <div class="loading-spinner"></div>
+            </div>
+            
+            <!-- JavaScript بهینه شده -->
+            <script src="assets/js/dashboard-optimized.js"></script>
         </body>
         </html>
         <?php
@@ -1005,8 +1261,215 @@ class SabaWindowsApp {
                     break;
                     
                 case 'tables':
-                    $tables = $this->getSQLServerTables();
+                    // نسخه سریع: بدون شمارش رکوردها برای نمایش اولیه
+                    $tables = $this->getSQLServerTables(false);
                     echo json_encode(['success' => true, 'data' => $tables]);
+                    break;
+                    
+                case 'table_count':
+                    // API جداگانه برای دریافت تعداد رکوردهای یک جدول خاص
+                    $tableName = $_GET['table'] ?? '';
+                    if ($tableName) {
+                        $count = $this->getTableRecordCount($tableName);
+                        echo json_encode(['success' => true, 'table' => $tableName, 'count' => $count]);
+                    } else {
+                        echo json_encode(['success' => false, 'error' => 'Table name required']);
+                    }
+                    break;
+                    
+                case 'table_structure':
+                    // ساختار جدول (نام ستون‌ها و نوع داده‌ها)
+                    $tableName = $_GET['table'] ?? '';
+                    if ($tableName) {
+                        $structure = $this->getTableStructure($tableName);
+                        if ($structure) {
+                            echo json_encode(['success' => true, 'columns' => $structure]);
+                        } else {
+                            echo json_encode(['success' => false, 'error' => 'Failed to get table structure']);
+                        }
+                    } else {
+                        echo json_encode(['success' => false, 'error' => 'Table name required']);
+                    }
+                    break;
+                    
+                case 'table_data':
+                    // داده‌های جدول با پشتیبانی از صفحه‌بندی و مرتب‌سازی
+                    $tableName = $_GET['table'] ?? '';
+                    $page = (int)($_GET['page'] ?? 1);
+                    $limit = (int)($_GET['limit'] ?? 50);
+                    $sortColumn = $_GET['sort'] ?? '';
+                    $sortOrder = strtoupper($_GET['order'] ?? 'ASC');
+                    
+                    // اعتبارسنجی ورودی‌ها
+                    $page = max(1, $page);
+                    $limit = min(500, max(1, $limit));
+                    
+                    if ($sortOrder != 'ASC' && $sortOrder != 'DESC') {
+                        $sortOrder = 'ASC';
+                    }
+                    
+                    if ($tableName) {
+                        $result = $this->getTableDataPaginated($tableName, $page, $limit, $sortColumn, $sortOrder);
+                        echo json_encode([
+                            'success' => true, 
+                            'data' => $result['data'], 
+                            'total' => $result['total'],
+                            'pages' => $result['pages'],
+                            'page' => $page
+                        ]);
+                    } else {
+                        echo json_encode(['success' => false, 'error' => 'Table name required']);
+                    }
+                    break;
+                    
+                case 'table_structure':
+                    if (isset($_GET['table'])) {
+                        $tableName = $_GET['table'];
+                        $structure = $this->getTableStructure($tableName);
+                        echo json_encode(['success' => true, 'data' => $structure]);
+                    } else {
+                        echo json_encode(['success' => false, 'error' => 'Table name required']);
+                    }
+                    break;
+                    
+                case 'table_data':
+                    if (isset($_GET['table'])) {
+                        $tableName = $_GET['table'];
+                        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+                        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 50;
+                        $sortColumn = isset($_GET['sort_column']) ? $_GET['sort_column'] : '';
+                        $sortOrder = isset($_GET['sort_order']) ? strtoupper($_GET['sort_order']) : 'ASC';
+                        
+                        // اطمینان از معتبر بودن مقادیر
+                        if ($page < 1) $page = 1;
+                        if ($limit < 10) $limit = 10;
+                        if ($limit > 1000) $limit = 1000;
+                        if ($sortOrder != 'ASC' && $sortOrder != 'DESC') $sortOrder = 'ASC';
+                        
+                        $result = $this->getTableDataPaginated($tableName, $page, $limit, $sortColumn, $sortOrder);
+                        
+                        echo json_encode([
+                            'success' => true,
+                            'data' => $result['data'],
+                            'total' => $result['total'],
+                            'pages' => $result['pages'],
+                            'page' => $page,
+                            'limit' => $limit
+                        ]);
+                    } else {
+                        echo json_encode(['success' => false, 'error' => 'Table name required']);
+                    }
+                    break;
+                    
+                case 'query':
+                    // اجرای کوئری SQL
+                    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                        $query = isset($_POST['query']) ? trim($_POST['query']) : '';
+                        
+                        if (empty($query)) {
+                            echo json_encode(['success' => false, 'error' => 'Query cannot be empty']);
+                            break;
+                        }
+                        
+                        // بررسی کوئری برای جلوگیری از دستورات خطرناک
+                        $dangerousCommands = ['DROP DATABASE', 'TRUNCATE DATABASE', 'ALTER DATABASE'];
+                        $isDangerous = false;
+                        
+                        foreach ($dangerousCommands as $command) {
+                            if (stripos($query, $command) !== false) {
+                                $isDangerous = true;
+                                break;
+                            }
+                        }
+                        
+                        if ($isDangerous) {
+                            echo json_encode(['success' => false, 'error' => 'Dangerous query detected. This operation is not allowed.']);
+                            break;
+                        }
+                        
+                        try {
+                            // بررسی نوع کوئری (SELECT یا غیر SELECT)
+                            $isSelect = (stripos(trim($query), 'SELECT') === 0);
+                            
+                            if ($this->sqlServerConn instanceof COM) {
+                                // اجرای کوئری با COM Object
+                                $conn = $this->sqlServerConn;
+                                
+                                if ($isSelect) {
+                                    // برای کوئری‌های SELECT، نتیجه را برمی‌گردانیم
+                                    $rs = $conn->Execute($query);
+                                    $data = [];
+                                    
+                                    if (!$rs->EOF) {
+                                        while (!$rs->EOF) {
+                                            $record = [];
+                                            for ($i = 0; $i < $rs->Fields->Count; $i++) {
+                                                $field = $rs->Fields($i);
+                                                $record[$field->Name] = $field->Value;
+                                            }
+                                            $data[] = $record;
+                                            $rs->MoveNext();
+                                        }
+                                        echo json_encode(['success' => true, 'data' => $data]);
+                                    } else {
+                                        echo json_encode(['success' => true, 'data' => []]);
+                                    }
+                                } else {
+                                    // برای کوئری‌های غیر SELECT، تعداد رکوردهای تحت تأثیر را برمی‌گردانیم
+                                    $affected = $conn->Execute($query);
+                                    echo json_encode(['success' => true, 'rowsAffected' => $affected]);
+                                }
+                            } else {
+                                // اجرای کوئری با PDO
+                                if ($isSelect) {
+                                    // برای کوئری‌های SELECT، نتیجه را برمی‌گردانیم
+                                    $stmt = $this->sqlServerConn->query($query);
+                                    $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                                    echo json_encode(['success' => true, 'data' => $data]);
+                                } else {
+                                    // برای کوئری‌های غیر SELECT، تعداد رکوردهای تحت تأثیر را برمی‌گردانیم
+                                    $rowsAffected = $this->sqlServerConn->exec($query);
+                                    echo json_encode(['success' => true, 'rowsAffected' => $rowsAffected]);
+                                }
+                            }
+                            
+                        } catch (Exception $e) {
+                            $this->logger->error("Query execution failed: " . $e->getMessage());
+                            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                        }
+                    } else {
+                        echo json_encode(['success' => false, 'error' => 'POST method required for query execution']);
+                    }
+                    break;
+                    
+                case 'status':
+                    // وضعیت اتصالات و اطلاعات سیستم
+                    $sqlConnected = $this->testSQLServerConnection();
+                    $cloudConnected = $this->testCloudConnection();
+                    
+                    $sqlInfo = [];
+                    $cloudInfo = [];
+                    
+                    if ($sqlConnected) {
+                        $sqlInfo['server'] = $this->config->getConfig()['sql_server']['server'] ?? 'N/A';
+                        $sqlInfo['database'] = $this->config->getConfig()['sql_server']['database'] ?? 'N/A';
+                        $sqlInfo['version'] = $this->getSQLServerVersion();
+                    }
+                    
+                    if ($cloudConnected) {
+                        $cloudInfo['host'] = $this->config->getConfig()['cloud']['host'] ?? 'N/A';
+                        $cloudInfo['database'] = $this->config->getConfig()['cloud']['database'] ?? 'N/A';
+                        $cloudInfo['server_info'] = $this->getCloudServerInfo();
+                    }
+                    
+                    echo json_encode([
+                        'success' => true,
+                        'sql_server_connected' => $sqlConnected,
+                        'cloud_connected' => $cloudConnected,
+                        'sql_server_info' => $sqlInfo,
+                        'cloud_info' => $cloudInfo,
+                        'timestamp' => date('Y-m-d H:i:s')
+                    ]);
                     break;
                     
                 case 'config':

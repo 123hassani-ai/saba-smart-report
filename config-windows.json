@@ -2,35 +2,43 @@
     "sql_server": {
         "server": "localhost\\SQLEXPRESS",
         "database": "SabaDB",
-        "username": "",
-        "password": "",
+        "username": "sa",
+        "password": "555",
         "port": "1433",
         "connection_method": "com",
         "timeout": 30,
         "trust_server_certificate": true,
-        "integrated_security": true
+        "integrated_security": false,
+        "encrypt": false,
+        "connection_pooling": true,
+        "retry_logic": true,
+        "retry_count": 3
     },
-    "cloud_mysql": {
-        "host": "your-cloud-server.com",
-        "database": "cloud_db",
-        "username": "cloud_user",
-        "password": "cloud_password",
-        "port": 3306,
+    "cloud": {
+        "host": "93.127.180.221",
+        "database": "reports_database",
+        "username": "sync_user",
+        "password": "YourStrongPassword123!",
+        "port": "3306",
         "charset": "utf8mb4"
     },
-    "sync": {
+    "settings": {
+        "auto_sync_interval": 300,
         "batch_size": 1000,
         "max_execution_time": 300,
         "memory_limit": "512M",
-        "log_level": "info",
+        "log_level": "debug",
         "retry_attempts": 3,
-        "retry_delay": 5
+        "retry_delay": 5,
+        "platform": "windows",
+        "debug_mode": true
     },
     "web": {
         "title": "Saba Reporting System - Windows",
         "theme": "modern",
         "language": "fa",
         "timezone": "Asia/Tehran",
-        "auto_refresh": 30
+        "auto_refresh": 30,
+        "default_view": "simple"
     }
 }

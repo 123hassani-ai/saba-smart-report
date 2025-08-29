@@ -1,17 +1,17 @@
 {
     "sql_server": {
-        "server": "123.123.1.2",
-        "database": "YOUR_DATABASE_NAME",
+        "server": "C123-SRV",
+        "database": "Saba404",
         "username": "sa",
-        "password": "YOUR_PASSWORD", 
+        "password": "555", 
         "port": "1433",
-        "connection_method": "odbc"
+        "connection_method": "pdo"
     },
     "cloud": {
-        "host": "YOUR_VPS_IP",
+        "host": "93.127.180.221",
         "database": "reports_database",
         "username": "sync_user",
-        "password": "YOUR_MYSQL_PASSWORD",
+        "password": "YourStrongPassword123!",
         "port": "3306"
     },
     "settings": {

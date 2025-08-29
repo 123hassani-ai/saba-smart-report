@@ -5,7 +5,7 @@
         "username": "sa",
         "password": "555",
         "port": "1433",
-        "connection_method": "com"
+        "connection_method": "odbc"
     },
     "cloud": {
         "host": "93.127.180.221",

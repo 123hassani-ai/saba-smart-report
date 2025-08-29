@@ -1,0 +1,591 @@
+/**
+ * SQL Server Style CSS
+ * 
+ * طراحی شبیه به SQL Server Management Studio
+ * برای نمایش جداول، داده‌ها و امکان مرتب‌سازی و فیلترینگ
+ */
+
+.sql-server-viewer {
+    font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
+    width: 100%;
+    height: 100%;
+    min-height: 600px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: #333;
+}
+
+.sql-server-viewer.rtl {
+    direction: rtl;
+}
+
+/* نوار ابزار */
+.sql-server-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+}
+
+.sql-server-tabs {
+    display: flex;
+}
+
+.sql-server-tabs .tab {
+    padding: 8px 15px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 3px 3px 0 0;
+    margin-right: 5px;
+}
+
+.sql-server-viewer.rtl .sql-server-tabs .tab {
+    margin-right: 0;
+    margin-left: 5px;
+}
+
+.sql-server-tabs .tab:hover {
+    background-color: #e9e9e9;
+}
+
+.sql-server-tabs .tab.active {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-bottom-color: #fff;
+    font-weight: bold;
+}
+
+.sql-server-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.sql-btn {
+    padding: 6px 10px;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.sql-btn:hover {
+    background-color: #e9e9e9;
+}
+
+/* محتوای اصلی */
+.sql-server-content {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* سایدبار */
+.sql-server-sidebar {
+    width: 250px;
+    background-color: #f8f8f8;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+}
+
+.sql-server-viewer.rtl .sql-server-sidebar {
+    border-right: none;
+    border-left: 1px solid #ddd;
+}
+
+.sql-server-search {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.sql-server-search input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-family: inherit;
+}
+
+.sql-server-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 5px 0;
+}
+
+.table-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    position: relative;
+}
+
+.table-item:hover {
+    background-color: #e9e9e9;
+}
+
+.table-item.selected {
+    background-color: #0078d7;
+    color: white;
+}
+
+.table-icon {
+    margin-right: 8px;
+    font-size: 16px;
+}
+
+.sql-server-viewer.rtl .table-icon {
+    margin-right: 0;
+    margin-left: 8px;
+}
+
+.table-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.record-count {
+    margin-right: 8px;
+    margin-left: 8px;
+    font-size: 12px;
+    color: #777;
+    background-color: #e9e9e9;
+    padding: 2px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+.table-item.selected .record-count {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.count-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+    opacity: 0.6;
+    display: none;
+}
+
+.table-item:hover .count-btn {
+    display: block;
+}
+
+.count-btn:hover {
+    opacity: 1;
+}
+
+/* محتوای اصلی */
+.sql-server-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: #fff;
+}
+
+.sql-server-table-info {
+    padding: 12px 15px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#current-table-name {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.table-stats {
+    display: flex;
+    gap: 15px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+}
+
+.stat-label {
+    color: #777;
+}
+
+.stat-value {
+    font-weight: bold;
+    color: #333;
+}
+
+/* کانتینر جدول */
+.sql-server-data-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sql-server-table-container {
+    flex: 1;
+    overflow: auto;
+}
+
+/* جدول داده */
+.sql-server-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sql-server-table th,
+.sql-server-table td {
+    padding: 8px 10px;
+    text-align: start;
+    border: 1px solid #ddd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px;
+}
+
+.sql-server-viewer.rtl .sql-server-table th,
+.sql-server-viewer.rtl .sql-server-table td {
+    text-align: right;
+}
+
+.sql-server-table thead {
+    background-color: #f5f5f5;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.sql-server-table th {
+    position: relative;
+    padding-right: 20px;
+    user-select: none;
+    cursor: pointer;
+}
+
+.sql-server-viewer.rtl .sql-server-table th {
+    padding-right: 10px;
+    padding-left: 20px;
+}
+
+.column-header:hover {
+    background-color: #e9e9e9;
+}
+
+.column-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.column-type {
+    font-size: 11px;
+    color: #777;
+    font-weight: normal;
+    margin-top: 3px;
+}
+
+.sort-icon {
+    width: 10px;
+    height: 10px;
+    position: relative;
+}
+
+.sort-icon::after {
+    content: "";
+    position: absolute;
+    right: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-style: solid;
+    border-width: 4px;
+    border-color: #999 transparent transparent transparent;
+}
+
+.sql-server-viewer.rtl .sort-icon::after {
+    right: auto;
+    left: -15px;
+}
+
+.sort-asc .sort-icon::after {
+    border-color: transparent transparent #333 transparent;
+    top: 25%;
+}
+
+.sort-desc .sort-icon::after {
+    border-color: #333 transparent transparent transparent;
+    top: 75%;
+}
+
+.sql-server-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.sql-server-table tr:hover {
+    background-color: #e9f5ff;
+}
+
+/* Стили для разных типов ячеек */
+.number-cell {
+    text-align: end;
+}
+
+.sql-server-viewer.rtl .number-cell {
+    text-align: left;
+}
+
+.date-cell {
+    color: #0078d7;
+}
+
+.null-cell {
+    color: #999;
+    font-style: italic;
+}
+
+.text-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.bit-cell {
+    text-align: center;
+    font-weight: bold;
+}
+
+.error-cell, .empty-cell {
+    text-align: center;
+    padding: 30px;
+    color: #777;
+    font-style: italic;
+}
+
+/* Пагинация */
+.sql-server-pagination {
+    display: flex;
+    justify-content: center;
+    padding: 10px 15px;
+    background-color: #f5f5f5;
+    border-top: 1px solid #ddd;
+    gap: 5px;
+}
+
+.pagination-btn {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.pagination-btn:hover:not(.disabled) {
+    background-color: #e9e9e9;
+}
+
+.pagination-btn.active {
+    background-color: #0078d7;
+    color: #fff;
+    border-color: #0078d7;
+}
+
+.pagination-btn.disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.pagination-ellipsis {
+    display: flex;
+    align-items: center;
+    padding: 0 5px;
+    color: #777;
+}
+
+/* حالت لودینگ */
+.sql-server-loading {
+    cursor: wait !important;
+}
+
+.sql-server-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.sql-server-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 120, 215, 0.2);
+    border-radius: 50%;
+    border-top-color: #0078d7;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-indicator {
+    padding: 20px;
+    text-align: center;
+    color: #777;
+    font-style: italic;
+}
+
+.error-message {
+    padding: 20px;
+    text-align: center;
+    color: #d9534f;
+    font-style: italic;
+}
+
+.empty-message {
+    padding: 20px;
+    text-align: center;
+    color: #777;
+    font-style: italic;
+}
+
+/* اعلان‌ها */
+.sql-server-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+    max-width: 400px;
+    min-width: 300px;
+    border-radius: 4px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.sql-server-viewer.rtl .sql-server-notification {
+    right: auto;
+    left: 20px;
+}
+
+.sql-server-notification.visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.sql-server-notification.closing {
+    transform: translateY(-10%);
+    opacity: 0;
+}
+
+.notification-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+}
+
+.notification-close {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 10px;
+    opacity: 0.7;
+}
+
+.notification-close:hover {
+    opacity: 1;
+}
+
+.sql-server-notification.success {
+    background-color: #e8f5e9;
+    border-left: 5px solid #4caf50;
+    color: #2e7d32;
+}
+
+.sql-server-notification.error {
+    background-color: #ffebee;
+    border-left: 5px solid #f44336;
+    color: #c62828;
+}
+
+.sql-server-notification.info {
+    background-color: #e3f2fd;
+    border-left: 5px solid #2196f3;
+    color: #0d47a1;
+}
+
+/* RTL support for notifications */
+.sql-server-viewer.rtl .notification-close {
+    margin-left: 0;
+    margin-right: 10px;
+}
+
+.sql-server-viewer.rtl .sql-server-notification.success,
+.sql-server-viewer.rtl .sql-server-notification.error,
+.sql-server-viewer.rtl .sql-server-notification.info {
+    border-left: none;
+    border-right: 5px solid;
+}
+
+.sql-server-viewer.rtl .sql-server-notification.success {
+    border-right-color: #4caf50;
+}
+
+.sql-server-viewer.rtl .sql-server-notification.error {
+    border-right-color: #f44336;
+}
+
+.sql-server-viewer.rtl .sql-server-notification.info {
+    border-right-color: #2196f3;
+}
+
+/* درخواست بزرگتر برای موبایل */
+@media (max-width: 768px) {
+    .sql-server-content {
+        flex-direction: column;
+    }
+    
+    .sql-server-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+        max-height: 200px;
+    }
+    
+    .sql-server-viewer.rtl .sql-server-sidebar {
+        border-left: none;
+    }
+    
+    .table-stats {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
